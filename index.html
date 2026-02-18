@@ -15,66 +15,47 @@ body {
     font-family: 'Space Grotesk', sans-serif;
     margin: 0;
     overflow: hidden;
-    touch-action: none;
 }
 
 .tile {
-    background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    user-select: none;
-    position: relative;
+    background:#000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
 }
 
 .socket {
-    width: 80%;
-    height: 80%;
-    background: #1e293b;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width:80%;
+    height:80%;
+    background:#1e293b;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 }
 
 .mini-circle {
-    width: 40%;
-    height: 40%;
-    border-radius: 50%;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0;
-    font-weight: 900;
-    color: white;
-}
-
-.indicator {
-    font-size: 8px;
-}
-
-.tile.selected .mini-circle {
-    width: 100%;
-    height: 100%;
+    width:60%;
+    height:60%;
+    border-radius:50%;
 }
 
 .hp-bar-container {
-    background: #334155;
-    border-radius: 999px;
-    height: 10px;
-    overflow: hidden;
+    background:#334155;
+    border-radius:999px;
+    height:10px;
+    overflow:hidden;
 }
 </style>
 </head>
 
-<body class="flex flex-col items-center justify-center min-h-screen p-2">
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
 
 <!-- START SCREEN -->
 <div id="start-screen" class="flex flex-col items-center gap-6">
     <div class="text-center">
-        <h1 class="text-7xl font-black text-sky-400">ASHED</h1>
+        <h1 class="text-6xl font-black text-sky-400">ASHED</h1>
         <p class="text-slate-500 text-xs uppercase">@Unruly357</p>
     </div>
 
@@ -86,15 +67,15 @@ body {
                   border border-slate-700 uppercase tracking-widest text-sm" />
 
     <button onclick="startGame()"
-            class="bg-sky-500 text-white font-bold px-12 py-4 rounded-full">
+            class="bg-sky-500 text-white font-bold px-10 py-3 rounded-full">
         BEGIN
     </button>
 </div>
 
-<!-- BATTLE SCREEN -->
+<!-- GAME SCREEN -->
 <div id="battle-screen" class="hidden w-full max-w-md flex flex-col gap-4">
 
-    <div class="space-y-2">
+    <div class="space-y-1">
         <div class="flex justify-between text-xs font-bold text-sky-400">
             <span id="player-name-display">HERO</span>
             <span>LVL <span id="player-level">1</span></span>
@@ -107,7 +88,14 @@ body {
         <div id="player-hp-text" class="text-center text-xs">60 / 60</div>
     </div>
 
-    <div class="aspect-square grid grid-cols-7 gap-1" id="grid-container"></div>
+    <div id="grid-container" class="aspect-square grid grid-cols-7 gap-1"></div>
+
+    <div class="space-y-1">
+        <div class="hp-bar-container">
+            <div id="enemy-hp-bar" class="h-full bg-rose-500"></div>
+        </div>
+        <div id="enemy-hp-text" class="text-center text-xs">120 / 120</div>
+    </div>
 
 </div>
 
@@ -129,13 +117,7 @@ A MzUnruly8 Production
 */
 
 const GRID_SIZE = 7;
-const TILE_TYPES = ['red','blue','green','yellow'];
-const TILE_COLORS = {
-    red:'#ef4444',
-    blue:'#3b82f6',
-    green:'#10b981',
-    yellow:'#f59e0b'
-};
+const COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b'];
 
 let gameState = {
     player: {
@@ -145,9 +127,95 @@ let gameState = {
         level:1
     },
     enemy:{
-        hp:120
+        hp:120,
+        maxHp:120
     }
 };
 
 function startGame(){
-    const input = document.getElementById
+    const input = document.getElementById("player-name-input");
+    if(input.value.trim() !== ""){
+        gameState.player.name = input.value.trim().toUpperCase();
+    }
+
+    document.getElementById("start-screen").classList.add("hidden");
+    document.getElementById("battle-screen").classList.remove("hidden");
+
+    updateUI();
+    initGrid();
+}
+
+function updateUI(){
+    document.getElementById("player-name-display").innerText = gameState.player.name;
+    document.getElementById("player-level").innerText = gameState.player.level;
+
+    document.getElementById("player-hp-text").innerText =
+        `${gameState.player.hp} / ${gameState.player.maxHp}`;
+
+    document.getElementById("player-hp-bar").style.width =
+        (gameState.player.hp / gameState.player.maxHp)*100 + "%";
+
+    document.getElementById("enemy-hp-text").innerText =
+        `${gameState.enemy.hp} / ${gameState.enemy.maxHp}`;
+
+    document.getElementById("enemy-hp-bar").style.width =
+        (gameState.enemy.hp / gameState.enemy.maxHp)*100 + "%";
+}
+
+function initGrid(){
+    const grid = document.getElementById("grid-container");
+    grid.innerHTML="";
+
+    for(let i=0;i<GRID_SIZE*GRID_SIZE;i++){
+        const tile=document.createElement("div");
+        tile.className="tile aspect-square";
+
+        const socket=document.createElement("div");
+        socket.className="socket";
+
+        const orb=document.createElement("div");
+        orb.className="mini-circle";
+
+        orb.style.backgroundColor =
+            COLORS[Math.floor(Math.random()*COLORS.length)];
+
+        tile.onclick=()=>{
+            dealDamage(5);
+        };
+
+        socket.appendChild(orb);
+        tile.appendChild(socket);
+        grid.appendChild(tile);
+    }
+}
+
+function dealDamage(amount){
+    gameState.enemy.hp -= amount;
+
+    if(gameState.enemy.hp <= 0){
+        levelUp();
+    }
+
+    updateUI();
+}
+
+function levelUp(){
+    gameState.player.level++;
+
+    if(gameState.player.level >= 10){
+        document.getElementById("battle-screen").classList.add("hidden");
+        document.getElementById("end-screen").classList.remove("hidden");
+        return;
+    }
+
+    gameState.enemy.maxHp += 60;
+    gameState.enemy.hp = gameState.enemy.maxHp;
+
+    gameState.player.maxHp += 20;
+    gameState.player.hp = gameState.player.maxHp;
+
+    updateUI();
+}
+</script>
+</body>
+</html>
