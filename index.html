@@ -1,463 +1,153 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ASHED</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
-        
-        body {
-            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-            color: #f8fafc;
-            font-family: 'Space Grotesk', sans-serif;
-            margin: 0;
-            overflow: hidden;
-            touch-action: none;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ASHED</title>
+<script src="https://cdn.tailwindcss.com"></script>
 
-        .tile {
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            user-select: none;
-            position: relative;
-        }
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
 
-        .socket {
-            width: 80%;
-            height: 80%;
-            background: #1e293b;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
+body {
+    background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+    color: #f8fafc;
+    font-family: 'Space Grotesk', sans-serif;
+    margin: 0;
+    overflow: hidden;
+    touch-action: none;
+}
 
-        .mini-circle {
-            width: 40%;
-            height: 40%;
-            border-radius: 50%;
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0; /* Hidden initially */
-            font-weight: 900;
-            color: rgba(255,255,255,0.9);
-        }
+.tile {
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
 
-        /* Indicator Letter Visibility */
-        .indicator {
-            font-size: 8px;
-            pointer-events: none;
-        }
+.socket {
+    width: 80%;
+    height: 80%;
+    background: #1e293b;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-        .tile.selected .mini-circle {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-        }
+.mini-circle {
+    width: 40%;
+    height: 40%;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+    font-weight: 900;
+    color: white;
+}
 
-        .tile.selected .indicator {
-            font-size: 14px;
-        }
+.indicator {
+    font-size: 8px;
+}
 
-        .shake {
-            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
-        }
+.tile.selected .mini-circle {
+    width: 100%;
+    height: 100%;
+}
 
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 0, 0); }
-            20%, 80% { transform: translate3d(2px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-            40%, 60% { transform: translate3d(4px, 0, 0); }
-        }
-
-        .floating-text {
-            position: absolute;
-            pointer-events: none;
-            animation: floatUp 0.8s ease-out forwards;
-            font-size: 16px;
-            font-weight: 700;
-            z-index: 100;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-
-        @keyframes floatUp {
-            0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-60px); opacity: 0; }
-        }
-
-        canvas#connectionCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        .hp-bar-container {
-            background: #334155;
-            border-radius: 999px;
-            height: 10px;
-            overflow: hidden;
-            border: 1px solid #475569;
-        }
-    </style>
+.hp-bar-container {
+    background: #334155;
+    border-radius: 999px;
+    height: 10px;
+    overflow: hidden;
+}
+</style>
 </head>
+
 <body class="flex flex-col items-center justify-center min-h-screen p-2">
 
-    <!-- Start Screen -->
-    <div id="start-screen" class="flex flex-col items-center gap-6">
-        <div class="text-center">
-            <h1 class="text-7xl font-black tracking-tighter text-sky-400 leading-none">ASHED</h1>
-            <p class="text-slate-500 text-xs mt-2 font-medium tracking-widest uppercase">@Unruly357</p>
-        </div>
-        <button onclick="startGame()" class="bg-sky-500 text-white font-bold px-12 py-4 rounded-full shadow-lg shadow-sky-500/30 active:scale-95 mt-4">
-            BEGIN
-        </button>
+<!-- START SCREEN -->
+<div id="start-screen" class="flex flex-col items-center gap-6">
+    <div class="text-center">
+        <h1 class="text-7xl font-black text-sky-400">ASHED</h1>
+        <p class="text-slate-500 text-xs uppercase">@Unruly357</p>
     </div>
 
-    <!-- Battle Screen -->
-    <div id="battle-screen" class="hidden w-full max-w-md flex flex-col gap-4">
-        
-        <!-- Enemy Unit -->
-        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
-            <div class="flex justify-between items-end mb-1">
-                <span id="enemy-name" class="text-sm font-bold text-rose-400 uppercase tracking-widest">Dark Entity</span>
-                <span class="text-[10px] text-slate-500">LVL <span id="enemy-level">1</span></span>
-            </div>
-            <div class="hp-bar-container">
-                <div id="enemy-hp-bar" class="h-full bg-gradient-to-r from-rose-600 to-orange-500 transition-all duration-500" style="width: 100%"></div>
-            </div>
-            <div class="flex justify-between text-[10px] font-bold text-slate-400 mt-1">
-                <span id="enemy-hp-text">100 / 100</span>
-                <span>ATTACK IN: <span id="enemy-timer" class="text-amber-400">3</span></span>
-            </div>
+    <input id="player-name-input"
+           type="text"
+           placeholder="ENTER NAME"
+           maxlength="12"
+           class="bg-slate-800 text-white text-center px-4 py-2 rounded-lg 
+                  border border-slate-700 uppercase tracking-widest text-sm" />
+
+    <button onclick="startGame()"
+            class="bg-sky-500 text-white font-bold px-12 py-4 rounded-full">
+        BEGIN
+    </button>
+</div>
+
+<!-- BATTLE SCREEN -->
+<div id="battle-screen" class="hidden w-full max-w-md flex flex-col gap-4">
+
+    <div class="space-y-2">
+        <div class="flex justify-between text-xs font-bold text-sky-400">
+            <span id="player-name-display">HERO</span>
+            <span>LVL <span id="player-level">1</span></span>
         </div>
 
-        <!-- 7x7 Grid -->
-        <div class="relative aspect-square w-full bg-black rounded-xl p-1 border-2 border-slate-800 grid grid-cols-7 grid-rows-7 gap-1" id="grid-container">
-            <canvas id="connectionCanvas"></canvas>
+        <div class="hp-bar-container">
+            <div id="player-hp-bar" class="h-full bg-emerald-500"></div>
         </div>
 
-        <!-- Player Unit -->
-        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-4">
-            <div class="space-y-2">
-                <div class="flex justify-between items-center text-[10px] font-bold text-sky-400">
-                    <span>PLAYER HERO</span>
-                    <span>LVL <span id="player-level">1</span></span>
-                </div>
-                <div class="hp-bar-container">
-                    <div id="player-hp-bar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500" style="width: 100%"></div>
-                </div>
-                <div id="player-hp-text" class="text-center text-[10px] font-bold text-slate-500">60 / 60</div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-2">
-                <button id="skill-1" onclick="useSkill(0)" class="bg-slate-800 border border-slate-700 text-[10px] py-2.5 rounded-lg text-slate-500 uppercase font-bold">
-                    Smite (15)
-                </button>
-                <button id="skill-2" onclick="useSkill(1)" class="bg-slate-800 border border-slate-700 text-[10px] py-2.5 rounded-lg text-slate-500 uppercase font-bold">
-                    Heal (10)
-                </button>
-            </div>
-            
-            <div class="flex justify-between items-center text-[10px] uppercase font-black text-slate-500">
-                <div>NRG: <span id="player-energy" class="text-amber-400 text-sm">0</span></div>
-                <div>SHIELD: <span id="player-def" class="text-sky-400 text-sm">0</span></div>
-            </div>
-        </div>
+        <div id="player-hp-text" class="text-center text-xs">60 / 60</div>
     </div>
 
-    <!-- End Screen -->
-    <div id="end-screen" class="hidden flex flex-col items-center gap-6">
-        <h2 id="end-title" class="text-4xl font-black italic text-sky-400">VICTORY</h2>
-        <button onclick="restartGame()" class="bg-white text-slate-950 font-bold px-12 py-4 rounded-full">REMATCH</button>
-    </div>
+    <div class="aspect-square grid grid-cols-7 gap-1" id="grid-container"></div>
 
-    <script>
-        const GRID_SIZE = 7;
-        const TILE_TYPES = ['red', 'blue', 'green', 'yellow'];
-        const TILE_COLORS = { red: '#ef4444', blue: '#3b82f6', green: '#10b981', yellow: '#f59e0b' };
-        const TILE_LETTERS = { red: 'A', blue: 'S', green: 'H', yellow: 'E' };
+</div>
 
-        let gameState = {
-            player: { hp: 60, maxHp: 60, level: 1, energy: 0, def: 0 },
-            enemy: { hp: 120, maxHp: 120, level: 1, timer: 3, maxTimer: 3, atk: 15 },
-            grid: [], isDragging: false, selectedTiles: [], isProcessing: false
-        };
+<!-- END SCREEN -->
+<div id="end-screen" class="hidden flex flex-col items-center gap-6">
+    <h2 id="end-title" class="text-4xl font-black text-sky-400">VICTORY</h2>
+    <button onclick="location.reload()" class="bg-white text-black font-bold px-8 py-3 rounded-full">
+        REMATCH
+    </button>
+</div>
 
-        const gridContainer = document.getElementById('grid-container');
+<script>
+/*
+ASHED
+Ashe: Attack • Shield • Health • Energy
+Developed by @unruly357
+A MzUnruly8 Production
+© 2026 All Rights Reserved
+*/
 
-        function startGame() {
-            document.getElementById('start-screen').classList.add('hidden');
-            document.getElementById('battle-screen').classList.remove('hidden');
-            initGrid();
-            updateUI();
-            setTimeout(resizeCanvas, 100);
-        }
+const GRID_SIZE = 7;
+const TILE_TYPES = ['red','blue','green','yellow'];
+const TILE_COLORS = {
+    red:'#ef4444',
+    blue:'#3b82f6',
+    green:'#10b981',
+    yellow:'#f59e0b'
+};
 
-        function initGrid() {
-            gridContainer.innerHTML = '<canvas id="connectionCanvas"></canvas>';
-            gameState.grid = [];
-            for (let r = 0; r < GRID_SIZE; r++) {
-                gameState.grid[r] = [];
-                for (let c = 0; c < GRID_SIZE; c++) createTile(r, c);
-            }
-            resizeCanvas();
-        }
+let gameState = {
+    player: {
+        name:"HERO",
+        hp:60,
+        maxHp:60,
+        level:1
+    },
+    enemy:{
+        hp:120
+    }
+};
 
-        function createTile(r, c) {
-            const type = TILE_TYPES[Math.floor(Math.random() * TILE_TYPES.length)];
-            const tileEl = document.createElement('div');
-            tileEl.className = `tile w-full h-full`;
-            tileEl.dataset.row = r;
-            tileEl.dataset.col = c;
-            tileEl.dataset.type = type;
-
-            const socket = document.createElement('div');
-            socket.className = 'socket';
-            
-            const miniCircle = document.createElement('div');
-            miniCircle.className = 'mini-circle';
-            miniCircle.style.backgroundColor = TILE_COLORS[type];
-            
-            const letter = document.createElement('span');
-            letter.className = 'indicator';
-            letter.innerText = TILE_LETTERS[type];
-            
-            miniCircle.appendChild(letter);
-            socket.appendChild(miniCircle);
-            tileEl.appendChild(socket);
-
-            const start = (e) => {
-                if (e.cancelable) e.preventDefault();
-                startDrag(r, c);
-            };
-            
-            const move = (e) => {
-                if (!gameState.isDragging) return;
-                let targetR, targetC;
-                const point = e.touches ? e.touches[0] : e;
-                const el = document.elementFromPoint(point.clientX, point.clientY);
-                const tile = el?.closest('.tile');
-                if (tile && tile.dataset.row) {
-                    targetR = parseInt(tile.dataset.row);
-                    targetC = parseInt(tile.dataset.col);
-                    continueDrag(targetR, targetC);
-                }
-            };
-
-            tileEl.onmousedown = start;
-            tileEl.onmouseover = () => gameState.isDragging && continueDrag(r, c);
-            tileEl.ontouchstart = start;
-            tileEl.ontouchmove = move;
-
-            gridContainer.appendChild(tileEl);
-            gameState.grid[r][c] = { type, el: tileEl };
-        }
-
-        function startDrag(r, c) {
-            if (gameState.isProcessing) return;
-            gameState.isDragging = true;
-            gameState.selectedTiles = [{ r, c }];
-            gameState.grid[r][c].el.classList.add('selected');
-            drawLines();
-        }
-
-        function continueDrag(r, c) {
-            if (!gameState.isDragging || gameState.isProcessing) return;
-            const last = gameState.selectedTiles[gameState.selectedTiles.length - 1];
-            
-            if (gameState.selectedTiles.length > 1) {
-                const prev = gameState.selectedTiles[gameState.selectedTiles.length - 2];
-                if (prev.r === r && prev.c === c) {
-                    gameState.grid[last.r][last.c].el.classList.remove('selected');
-                    gameState.selectedTiles.pop();
-                    drawLines();
-                    return;
-                }
-            }
-
-            if (last.r === r && last.c === c) return;
-
-            const isAdj = Math.abs(last.r - r) <= 1 && Math.abs(last.c - c) <= 1;
-            const isSame = gameState.grid[r][c].type === gameState.grid[last.r][last.c].type;
-            const isNew = !gameState.selectedTiles.some(t => t.r === r && t.c === c);
-
-            if (isAdj && isSame && isNew) {
-                gameState.selectedTiles.push({ r, c });
-                gameState.grid[r][c].el.classList.add('selected');
-                drawLines();
-            }
-        }
-
-        window.onmouseup = window.ontouchend = () => { if (gameState.isDragging) endDrag(); };
-
-        function endDrag() {
-            gameState.isDragging = false;
-            if (gameState.selectedTiles.length >= 3) processSelection();
-            else {
-                gameState.selectedTiles.forEach(t => gameState.grid[t.r][t.c].el.classList.remove('selected'));
-                gameState.selectedTiles = [];
-                clearLines();
-            }
-        }
-
-        async function processSelection() {
-            gameState.isProcessing = true;
-            const count = gameState.selectedTiles.length;
-            const type = gameState.grid[gameState.selectedTiles[0].r][gameState.selectedTiles[0].c].type;
-            
-            if (type === 'red') dealDamage(count * 6);
-            else if (type === 'blue') {
-                gameState.player.def += (count * 3);
-                showFloatingText(`+${count*3} S`, '#3b82f6');
-            } else if (type === 'green') healPlayer(count * 4);
-            else if (type === 'yellow') {
-                gameState.player.energy += (count * 2);
-                showFloatingText(`+${count*2} E`, '#f59e0b');
-            }
-
-            await new Promise(r => setTimeout(r, 200));
-            initGrid();
-            clearLines();
-            gameState.selectedTiles = [];
-            
-            gameState.enemy.timer--;
-            if (gameState.enemy.timer <= 0) {
-                await enemyAttack();
-                gameState.enemy.timer = gameState.enemy.maxTimer;
-            }
-            
-            gameState.isProcessing = false;
-            updateUI();
-            if (gameState.player.hp <= 0) showEndScreen(false);
-        }
-
-        function dealDamage(amount) {
-            gameState.enemy.hp -= amount;
-            showFloatingText(`-${amount} A`, '#ef4444', true);
-            if (gameState.enemy.hp <= 0) levelUp();
-        }
-
-        async function enemyAttack() {
-            const hit = Math.max(1, gameState.enemy.atk - gameState.player.def);
-            gameState.player.hp -= hit;
-            gameState.player.def = 0;
-            showFloatingText(`-${hit}`, '#fff');
-            document.body.classList.add('shake');
-            setTimeout(() => document.body.classList.remove('shake'), 400);
-            updateUI();
-        }
-
-        function healPlayer(amount) {
-            gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + amount);
-            showFloatingText(`+${amount} H`, '#10b981');
-        }
-
-        function levelUp() {
-            gameState.player.level++;
-            gameState.player.maxHp += 25;
-            gameState.player.hp = gameState.player.maxHp;
-            gameState.enemy.level++;
-            gameState.enemy.maxHp += 60;
-            gameState.enemy.hp = gameState.enemy.maxHp;
-            gameState.enemy.atk += 6;
-            showFloatingText("LVL UP", "#38bdf8");
-        }
-
-        function useSkill(idx) {
-            if (gameState.isProcessing) return;
-            if (idx === 0 && gameState.player.energy >= 15) {
-                gameState.player.energy -= 15;
-                dealDamage(50 + (gameState.player.level * 10));
-                updateUI();
-            } else if (idx === 1 && gameState.player.energy >= 10) {
-                gameState.player.energy -= 10;
-                healPlayer(40);
-                updateUI();
-            }
-        }
-
-        function updateUI() {
-            document.getElementById('enemy-hp-bar').style.width = (gameState.enemy.hp / gameState.enemy.maxHp) * 100 + '%';
-            document.getElementById('enemy-hp-text').innerText = `${Math.ceil(gameState.enemy.hp)} / ${gameState.enemy.maxHp}`;
-            document.getElementById('enemy-timer').innerText = gameState.enemy.timer;
-            document.getElementById('enemy-level').innerText = gameState.enemy.level;
-            document.getElementById('player-hp-bar').style.width = (gameState.player.hp / gameState.player.maxHp) * 100 + '%';
-            document.getElementById('player-hp-text').innerText = `${Math.ceil(gameState.player.hp)} / ${gameState.player.maxHp}`;
-            document.getElementById('player-energy').innerText = gameState.player.energy;
-            document.getElementById('player-def').innerText = gameState.player.def;
-            document.getElementById('player-level').innerText = gameState.player.level;
-
-            const b1 = document.getElementById('skill-1');
-            const b2 = document.getElementById('skill-2');
-            b1.className = gameState.player.energy >= 15 ? "bg-sky-600 border border-sky-400 text-[10px] py-2.5 rounded-lg text-white font-bold" : "bg-slate-800 border border-slate-700 text-[10px] py-2.5 rounded-lg text-slate-500 font-bold opacity-50";
-            b2.className = gameState.player.energy >= 10 ? "bg-emerald-600 border border-emerald-400 text-[10px] py-2.5 rounded-lg text-white font-bold" : "bg-slate-800 border border-slate-700 text-[10px] py-2.5 rounded-lg text-slate-500 font-bold opacity-50";
-        }
-
-        function showEndScreen(victory) {
-            document.getElementById('battle-screen').classList.add('hidden');
-            document.getElementById('end-screen').classList.remove('hidden');
-            document.getElementById('end-title').innerText = victory ? "ASHED VICTORY" : "ASHED OUT";
-        }
-
-        function restartGame() { location.reload(); }
-
-        function showFloatingText(text, color, isEnemy = false) {
-            const div = document.createElement('div');
-            div.className = 'floating-text';
-            div.innerText = text;
-            div.style.color = color;
-            div.style.left = '50%';
-            div.style.top = isEnemy ? '20%' : '80%';
-            document.body.appendChild(div);
-            setTimeout(() => div.remove(), 800);
-        }
-
-        function resizeCanvas() {
-            const c = document.getElementById('connectionCanvas');
-            if (!c) return;
-            const r = gridContainer.getBoundingClientRect();
-            c.width = r.width;
-            c.height = r.height;
-        }
-
-        function clearLines() {
-            const c = document.getElementById('connectionCanvas');
-            if (c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
-        }
-
-        function drawLines() {
-            const c = document.getElementById('connectionCanvas');
-            if (!c || gameState.selectedTiles.length < 1) return;
-            const ctx = c.getContext('2d');
-            ctx.clearRect(0, 0, c.width, c.height);
-            ctx.beginPath();
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-
-            const cr = gridContainer.getBoundingClientRect();
-            gameState.selectedTiles.forEach((p, i) => {
-                const tr = gameState.grid[p.r][p.c].el.getBoundingClientRect();
-                const x = (tr.left - cr.left) + tr.width / 2;
-                const y = (tr.top - cr.top) + tr.height / 2;
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-        }
-
-        window.onresize = resizeCanvas;
-    </script>
-</body>
-</html>
-
+function startGame(){
+    const input = document.getElementById
