@@ -406,34 +406,64 @@
         }
 
         function resizeCanvas() {
-            const c = document.getElementById('connectionCanvas');
-            if (!c) return;
-            const r = gridEl.getBoundingClientRect();
-            c.width = r.width; c.height = r.height;
-        }
+    const canvas = document.getElementById('connectionCanvas');
+    if (!canvas) return;
 
-        function clearLines() {
-            const c = document.getElementById('connectionCanvas');
-            if (c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
-        }
+    const rect = gridContainer.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
 
-        function drawLines() {
-            const c = document.getElementById('connectionCanvas');
-            const ctx = c.getContext('2d');
-            ctx.clearRect(0, 0, c.width, c.height);
-            if (state.selected.length < 1) return;
-            ctx.beginPath();
-            ctx.lineWidth = 6;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-            const rect = gridEl.getBoundingClientRect();
-            state.selected.forEach((p, i) => {
-                const tr = state.grid[p.r][p.c].el.getBoundingClientRect();
-                const x = (tr.left - rect.left) + tr.width / 2;
-                const y = (tr.top - rect.top) + tr.height / 2;
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#fff';
-          
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + "px";
+    canvas.style.height = rect.height + "px";
+
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+    ctx.scale(dpr, dpr);
+}
+
+function clearLines() {
+    const canvas = document.getElementById('connectionCanvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawLines() {
+    const canvas = document.getElementById('connectionCanvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    clearLines();
+
+    if (gameState.selectedTiles.length < 2) return;
+
+    const rect = gridContainer.getBoundingClientRect();
+    const tileSize = rect.width / GRID_SIZE;
+
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "white";
+    ctx.shadowColor = "white";
+    ctx.shadowBlur = 15;
+
+    ctx.beginPath();
+
+    gameState.selectedTiles.forEach((tile, index) => {
+        const x = tile.c * tileSize + tileSize / 2;
+        const y = tile.r * tileSize + tileSize / 2;
+
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+
+    ctx.stroke();
+    ctx.shadowBlur = 0; // reset shadow
+}
+
+window.addEventListener("resize", resizeCanvas);
