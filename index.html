@@ -5,465 +5,494 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ASHED</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ashed-v1';
-
-        window.db = db;
-        window.appId = appId;
-        window.auth = auth;
-
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-        };
-        initAuth();
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                window.syncLeaderboard();
-                window.startGame();
-            }
-        });
-
-        window.syncLeaderboard = () => {
-            const q = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-            onSnapshot(q, (snapshot) => {
-                const scores = snapshot.docs.map(d => d.data());
-                const sorted = scores.sort((a, b) => b.level - a.level).slice(0, 3);
-                const container = document.getElementById('lb-list');
-                if (container) {
-                    container.innerHTML = sorted.map(s => 
-                        `<div class="flex justify-between text-[9px] py-0.5 border-b border-slate-800">
-                            <span class="truncate w-16 text-slate-400">${s.name}</span>
-                            <span class="text-sky-400 font-bold">L${s.level}</span>
-                        </div>`
-                    ).join('');
-                }
-            }, (err) => {});
-        };
-
-        window.submitScore = async (level) => {
-            const user = auth.currentUser;
-            if (!user) return;
-            const name = prompt("Enter name for Leaderboard:", "HERO") || "ANON";
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', user.uid), {
-                name, level, uid: user.uid
-            }, { merge: true });
-        };
-    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
-        * { touch-action: none; -webkit-user-select: none; }
+        
         body {
-            background: #020617;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
             color: #f8fafc;
             font-family: 'Space Grotesk', sans-serif;
             margin: 0;
             overflow: hidden;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            touch-action: none;
+            height: 100dvh;
         }
-        .tile { 
-            background: #0f172a; 
-            border: 1px solid rgba(51, 65, 85, 0.5);
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
+
+        .tile {
+            background: rgba(15, 23, 42, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
             border-radius: 8px;
+            transition: transform 0.1s ease;
+        }
+
+        .socket {
+            width: 85%;
+            height: 85%;
+            background: #1e293b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .mini-circle {
+            width: 45%;
+            height: 45%;
+            border-radius: 50%;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            color: white;
+            box-shadow: 0 0 10px transparent;
+        }
+
+        .indicator {
+            font-size: 10px;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .tile.selected {
+            transform: scale(0.9);
+        }
+
+        .tile.selected .mini-circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 20%;
+            box-shadow: 0 0 15px currentColor;
+        }
+
+        .tile.selected .indicator {
+            font-size: 16px;
+            opacity: 1;
+        }
+
+        .shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(3px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+            40%, 60% { transform: translate3d(5px, 0, 0); }
+        }
+
+        .floating-text {
+            position: absolute;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            font-size: 20px;
+            font-weight: 800;
+            z-index: 100;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        @keyframes floatUp {
+            0% { transform: translate(-50%, 0); opacity: 1; }
+            100% { transform: translate(-50%, -80px); opacity: 0; }
+        }
+
+        #connectionCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
             z-index: 10;
         }
-        .mini-circle { width: 55%; height: 55%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
-        .tile.selected { border-color: #fff; transform: scale(0.9); background: #1e293b; }
-        canvas#connectionCanvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 50; }
-        .hp-bar-container { background: #1e293b; border-radius: 4px; height: 6px; overflow: hidden; width: 100%; }
-        .floating-text { position: absolute; pointer-events: none; animation: floatUp 0.8s ease-out forwards; font-weight: 900; z-index: 100; font-size: 1.5rem; }
-        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100px); opacity: 0; } }
-        .shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } }
+
+        .hp-bar-container {
+            background: #1e293b;
+            border-radius: 4px;
+            height: 12px;
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+
+        .btn-active {
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+            transform: translateY(-1px);
+        }
     </style>
 </head>
-<body class="p-4">
+<body class="flex flex-col items-center justify-between py-6 px-4">
 
-    <div id="battle-screen" class="w-full max-w-md flex flex-col gap-3">
-        <div class="flex justify-between items-start gap-4">
-            <h1 class="text-4xl font-black text-sky-500 italic leading-none">ASHED</h1>
-            <div id="lb-list" class="flex-1 bg-slate-900/50 p-2 rounded border border-slate-800 max-w-[120px]">
-                <span class="text-[8px] text-slate-500 uppercase font-bold block mb-1">Leaders</span>
-            </div>
+    <!-- Start Screen -->
+    <div id="start-screen" class="flex flex-col items-center justify-center h-full gap-8">
+        <div class="text-center">
+            <h1 class="text-8xl font-black tracking-tighter text-sky-500 italic">ASHED</h1>
+            <p class="text-slate-500 text-xs mt-4 font-bold tracking-[0.3em] uppercase opacity-60">UNRULY CORE ENGINE</p>
         </div>
+        <button onclick="startGame()" class="bg-sky-600 hover:bg-sky-500 text-white font-black px-16 py-5 rounded-sm skew-x-[-10deg] transition-all active:scale-90">
+            INITIATE
+        </button>
+    </div>
 
-        <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-800">
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-[10px] font-black text-rose-500 uppercase tracking-tighter">Opponent Lvl <span id="enemy-level">1</span></span>
-                <span class="text-[10px] text-slate-500 font-bold uppercase">Strike In: <span id="enemy-timer" class="text-amber-500">3</span></span>
+    <!-- Battle Screen -->
+    <div id="battle-screen" class="hidden w-full max-w-md flex flex-col gap-4">
+        
+        <!-- Enemy Section -->
+        <div class="bg-slate-900/40 p-4 border-l-4 border-rose-600 backdrop-blur-sm">
+            <div class="flex justify-between items-end mb-2">
+                <span id="enemy-name" class="text-lg font-black text-rose-500 uppercase tracking-tighter">Void Weaver</span>
+                <span class="text-[10px] text-slate-500 font-bold">LVL <span id="enemy-level">1</span></span>
             </div>
             <div class="hp-bar-container">
                 <div id="enemy-hp-bar" class="h-full bg-rose-600 transition-all duration-300" style="width: 100%"></div>
             </div>
+            <div class="flex justify-between text-[10px] font-bold text-slate-400 mt-2 uppercase">
+                <span id="enemy-hp-text">100 / 100</span>
+                <span>Burst In: <span id="enemy-timer" class="text-rose-500">3</span></span>
+            </div>
         </div>
 
-        <div class="relative aspect-square w-full bg-slate-950 rounded-lg p-1 border-2 border-slate-800 grid grid-cols-7 grid-rows-7 gap-1" id="grid-container">
+        <!-- The Grid -->
+        <div class="relative aspect-square w-full bg-slate-950/80 rounded-sm p-1 border border-slate-800 grid grid-cols-7 grid-rows-7 gap-1" id="grid-container">
             <canvas id="connectionCanvas"></canvas>
         </div>
 
-        <div class="bg-slate-900/90 p-4 rounded-lg border border-slate-800 space-y-4">
-            <div class="flex justify-between items-center">
-                <div class="flex flex-col gap-1 w-full mr-4">
-                    <span class="text-[10px] font-black text-sky-400 uppercase tracking-tighter">Hero Rank <span id="player-level">1</span></span>
-                    <div class="hp-bar-container">
-                        <div id="player-hp-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 100%"></div>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <span class="text-[10px] text-slate-500 font-black block uppercase">Energy</span>
-                    <span id="player-energy" class="text-amber-500 font-black text-lg leading-none">0</span>
-                </div>
+        <!-- Player Section -->
+        <div class="bg-slate-900/40 p-4 border-r-4 border-sky-500 backdrop-blur-sm space-y-4">
+            <div class="flex justify-between items-center text-[10px] font-black text-sky-500 tracking-widest">
+                <span>SYSTEM STATUS</span>
+                <span>LV <span id="player-level">1</span></span>
             </div>
-            <div class="grid grid-cols-2 gap-2">
-                <button id="skill-1" onclick="useSkill(0)" class="bg-slate-800 text-[10px] py-3 rounded text-slate-500 uppercase font-black border border-slate-700 active:bg-slate-700">Smite (15)</button>
-                <button id="skill-2" onclick="useSkill(1)" class="bg-slate-800 text-[10px] py-3 rounded text-slate-500 uppercase font-black border border-slate-700 active:bg-slate-700">Heal (10)</button>
+            
+            <div class="hp-bar-container">
+                <div id="player-hp-bar" class="h-full bg-sky-500 transition-all duration-300" style="width: 100%"></div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <button id="skill-1" onclick="useSkill(0)" class="bg-slate-800/50 border border-slate-700 py-3 text-[10px] font-black uppercase text-slate-500 transition-all rounded-sm">
+                    Smite (15 E)
+                </button>
+                <button id="skill-2" onclick="useSkill(1)" class="bg-slate-800/50 border border-slate-700 py-3 text-[10px] font-black uppercase text-slate-500 transition-all rounded-sm">
+                    Reboot (10 E)
+                </button>
+            </div>
+
+            <div class="flex justify-between items-center font-black">
+                <div class="text-[10px] text-slate-500 uppercase">Energy: <span id="player-energy" class="text-amber-500 text-sm ml-1">0</span></div>
+                <div class="text-[10px] text-slate-500 uppercase">Shield: <span id="player-def" class="text-sky-400 text-sm ml-1">0</span></div>
             </div>
         </div>
     </div>
 
-    <div id="win-screen" class="hidden fixed inset-0 bg-slate-950/95 z-[100] flex flex-col items-center justify-center p-8 text-center">
-        <h2 class="text-6xl font-black italic text-sky-400 mb-4">VICTORY</h2>
-        <p class="text-slate-400 text-sm mb-12 tracking-widest uppercase">Target entity neutralized. Advancing...</p>
-        <button onclick="nextLevel()" class="w-full max-w-xs bg-sky-500 text-white font-black py-5 rounded-full shadow-2xl shadow-sky-500/20 active:scale-95 transition-transform">NEXT PHASE</button>
+    <!-- End Screen -->
+    <div id="end-screen" class="hidden flex flex-col items-center justify-center h-full gap-8">
+        <h2 id="end-title" class="text-6xl font-black italic text-sky-500">VICTORY</h2>
+        <button onclick="restartGame()" class="bg-white text-black font-black px-12 py-4 rounded-sm skew-x-[-10deg]">REBOOT</button>
     </div>
 
     <script>
         const GRID_SIZE = 7;
         const TILE_TYPES = ['red', 'blue', 'green', 'yellow'];
-        const TILE_COLORS = { red: '#ef4444', blue: '#3b82f6', green: '#10b981', yellow: '#f59e0b' };
+        const TILE_COLORS = { red: '#f43f5e', blue: '#0ea5e9', green: '#10b981', yellow: '#f59e0b' };
         const TILE_LETTERS = { red: 'A', blue: 'S', green: 'H', yellow: 'E' };
-
-        let state = {
-            player: { hp: 100, maxHp: 100, level: 1, energy: 0, def: 0 },
-            enemy: { hp: 100, maxHp: 100, level: 1, timer: 3, atk: 12 },
-            grid: [], isDragging: false, selected: [], isProcessing: false
+        
+        let gameState = {
+            player: { hp: 80, maxHp: 80, level: 1, energy: 0, def: 0 },
+            enemy: { hp: 150, maxHp: 150, level: 1, timer: 3, maxTimer: 3, atk: 18 },
+            grid: [], isDragging: false, selectedTiles: [], isProcessing: false
         };
 
-        const gridEl = document.getElementById('grid-container');
+        const gridContainer = document.getElementById('grid-container');
         const canvas = document.getElementById('connectionCanvas');
 
-        window.startGame = () => {
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('battle-screen').classList.remove('hidden');
             initGrid();
             updateUI();
-            resizeCanvas();
-        };
+            window.addEventListener('resize', resizeCanvas);
+            setTimeout(resizeCanvas, 50);
+        }
 
         function initGrid() {
-            gridEl.innerHTML = '<canvas id="connectionCanvas"></canvas>';
-            state.grid = [];
+            gridContainer.querySelectorAll('.tile').forEach(t => t.remove());
+            gameState.grid = [];
             for (let r = 0; r < GRID_SIZE; r++) {
-                state.grid[r] = [];
-                for (let c = 0; c < GRID_SIZE; c++) {
-                    const type = TILE_TYPES[Math.floor(Math.random() * TILE_TYPES.length)];
-                    state.grid[r][c] = { type, el: createTile(r, c, type) };
-                }
+                gameState.grid[r] = [];
+                for (let c = 0; c < GRID_SIZE; c++) createTile(r, c);
             }
-            resizeCanvas();
         }
 
-        function createTile(r, c, type) {
-            const el = document.createElement('div');
-            el.className = 'tile w-full h-full';
-            el.style.gridRow = r + 1; el.style.gridColumn = c + 1;
-            el.innerHTML = `<div class="mini-circle" style="background:${TILE_COLORS[type]}"><span class="text-[10px] text-white">${TILE_LETTERS[type]}</span></div>`;
+        function createTile(r, c) {
+            const type = TILE_TYPES[Math.floor(Math.random() * TILE_TYPES.length)];
+            const tileEl = document.createElement('div');
+            tileEl.className = 'tile';
+            tileEl.dataset.row = r;
+            tileEl.dataset.col = c;
+            tileEl.dataset.type = type;
+
+            const socket = document.createElement('div');
+            socket.className = 'socket';
             
-            const startHandler = (e) => { 
-                if(state.isProcessing) return;
-                state.isDragging = true;
-                const pt = e.touches ? e.touches[0] : e;
-                const pos = getGridCoord(pt);
-                if (pos) startDrag(pos.r, pos.c);
-            };
+            const miniCircle = document.createElement('div');
+            miniCircle.className = 'mini-circle';
+            miniCircle.style.backgroundColor = TILE_COLORS[type];
+            miniCircle.style.color = TILE_COLORS[type];
+            
+            const letter = document.createElement('span');
+            letter.className = 'indicator';
+            letter.innerText = TILE_LETTERS[type];
+            
+            miniCircle.appendChild(letter);
+            socket.appendChild(miniCircle);
+            tileEl.appendChild(socket);
 
-            el.addEventListener('touchstart', startHandler, {passive: false});
-            el.addEventListener('mousedown', startHandler);
-            gridEl.appendChild(el);
-            return el;
+            // Input Listeners
+            tileEl.addEventListener('touchstart', (e) => { e.preventDefault(); startDrag(r, c); }, {passive: false});
+            tileEl.addEventListener('mousedown', (e) => { startDrag(r, c); });
+
+            gridContainer.appendChild(tileEl);
+            gameState.grid[r][c] = { type, el: tileEl };
         }
 
-        function getGridCoord(pt) {
-            const rect = gridEl.getBoundingClientRect();
-            const x = pt.clientX - rect.left;
-            const y = pt.clientY - rect.top;
-            if (x < 0 || x > rect.width || y < 0 || y > rect.height) return null;
-            return {
-                c: Math.floor((x / rect.width) * GRID_SIZE),
-                r: Math.floor((y / rect.height) * GRID_SIZE)
-            };
-        }
+        // Global Move Handlers for Mobile
+        window.addEventListener('touchmove', (e) => {
+            if (!gameState.isDragging) return;
+            const touch = e.touches[0];
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            const tile = el?.closest('.tile');
+            if (tile) continueDrag(parseInt(tile.dataset.row), parseInt(tile.dataset.col));
+        }, {passive: false});
 
-        const handleMove = (e) => {
-            if (!state.isDragging || state.isProcessing) return;
-            if (e.cancelable) e.preventDefault();
-            const pt = e.touches ? e.touches[0] : e;
-            const pos = getGridCoord(pt);
-            if (pos && pos.r >= 0 && pos.r < GRID_SIZE && pos.c >= 0 && pos.c < GRID_SIZE) {
-                continueDrag(pos.r, pos.c);
-            }
-        };
+        window.addEventListener('mousemove', (e) => {
+            if (!gameState.isDragging) return;
+            const tile = e.target.closest('.tile');
+            if (tile) continueDrag(parseInt(tile.dataset.row), parseInt(tile.dataset.col));
+        });
 
-        window.addEventListener('mousemove', handleMove);
-        window.addEventListener('touchmove', handleMove, { passive: false });
-        window.addEventListener('mouseup', endDrag);
         window.addEventListener('touchend', endDrag);
+        window.addEventListener('mouseup', endDrag);
 
         function startDrag(r, c) {
-            state.selected = [{ r, c }];
-            state.grid[r][c].el.classList.add('selected');
+            if (gameState.isProcessing) return;
+            gameState.isDragging = true;
+            gameState.selectedTiles = [{ r, c }];
+            gameState.grid[r][c].el.classList.add('selected');
             drawLines();
         }
 
         function continueDrag(r, c) {
-            const last = state.selected[state.selected.length - 1];
-            if (last.r === r && last.c === c) return;
-
-            if (state.selected.length > 1) {
-                const prev = state.selected[state.selected.length - 2];
+            if (!gameState.isDragging || gameState.isProcessing) return;
+            const last = gameState.selectedTiles[gameState.selectedTiles.length - 1];
+            
+            // Undo logic
+            if (gameState.selectedTiles.length > 1) {
+                const prev = gameState.selectedTiles[gameState.selectedTiles.length - 2];
                 if (prev.r === r && prev.c === c) {
-                    state.grid[last.r][last.c].el.classList.remove('selected');
-                    state.selected.pop();
+                    gameState.grid[last.r][last.c].el.classList.remove('selected');
+                    gameState.selectedTiles.pop();
                     drawLines();
                     return;
                 }
             }
 
+            if (last.r === r && last.c === c) return;
+
             const isAdj = Math.abs(last.r - r) <= 1 && Math.abs(last.c - c) <= 1;
-            const isSame = state.grid[r][c].type === state.grid[last.r][last.c].type;
-            const isNew = !state.selected.some(s => s.r === r && s.c === c);
+            const isSame = gameState.grid[r][c].type === gameState.grid[last.r][last.c].type;
+            const isNew = !gameState.selectedTiles.some(t => t.r === r && t.c === c);
 
             if (isAdj && isSame && isNew) {
-                state.selected.push({ r, c });
-                state.grid[r][c].el.classList.add('selected');
+                gameState.selectedTiles.push({ r, c });
+                gameState.grid[r][c].el.classList.add('selected');
                 drawLines();
             }
         }
 
         async function endDrag() {
-            if (!state.isDragging) return;
-            state.isDragging = false;
-            if (state.selected.length >= 3) await processChain();
-            else {
-                state.selected.forEach(s => state.grid[s.r][s.c].el.classList.remove('selected'));
-                state.selected = [];
+            if (!gameState.isDragging) return;
+            gameState.isDragging = false;
+            
+            if (gameState.selectedTiles.length >= 3) {
+                await processSelection();
+            } else {
+                gameState.selectedTiles.forEach(t => gameState.grid[t.r][t.c].el.classList.remove('selected'));
+                gameState.selectedTiles = [];
                 clearLines();
             }
         }
 
-        async function processChain() {
-            state.isProcessing = true;
-            const count = state.selected.length;
-            const type = state.grid[state.selected[0].r][state.selected[0].c].type;
+        async function processSelection() {
+            gameState.isProcessing = true;
+            const count = gameState.selectedTiles.length;
+            const type = gameState.grid[gameState.selectedTiles[0].r][gameState.selectedTiles[0].c].type;
+            
+            // Apply Effects
+            if (type === 'red') dealDamage(count * 7);
+            else if (type === 'blue') {
+                gameState.player.def += (count * 4);
+                showFloatingText(`SHIELD +${count*4}`, '#0ea5e9');
+            } else if (type === 'green') {
+                const heal = count * 5;
+                gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + heal);
+                showFloatingText(`RECOVER +${heal}`, '#10b981');
+            } else if (type === 'yellow') {
+                gameState.player.energy += (count * 3);
+                showFloatingText(`CORE +${count*3}`, '#f59e0b');
+            }
 
-            if (type === 'red') dealDmg(count * 6);
-            if (type === 'blue') { state.player.def += (count * 2); showText(`+${count*2} SHIELD`, '#3b82f6'); }
-            if (type === 'green') heal(count * 5);
-            if (type === 'yellow') { state.player.energy += (count * 2); showText(`+${count*2} NRG`, '#f59e0b'); }
-
-            clearLines();
-            state.selected.forEach(s => {
-                const el = state.grid[s.r][s.c].el;
-                el.style.transform = 'scale(0)';
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 200);
-                state.grid[s.r][s.c] = null;
+            // Cleanup
+            gameState.selectedTiles.forEach(t => {
+                gameState.grid[t.r][t.c].el.style.opacity = '0';
+                gameState.grid[t.r][t.c].el.style.transform = 'scale(0)';
             });
 
             await new Promise(r => setTimeout(r, 250));
-            refillGrid();
-            
-            state.enemy.timer--;
-            if (state.enemy.timer <= 0) {
-                await new Promise(r => setTimeout(r, 400));
-                enemyAtk();
-                state.enemy.timer = 3;
-            }
-
-            state.selected = [];
-            state.isProcessing = false;
-            updateUI();
-            if (state.player.hp <= 0) {
-                alert("HERO ASHED. REINITIALIZING.");
-                location.reload();
-            }
-        }
-
-        function refillGrid() {
-            for (let c = 0; c < GRID_SIZE; c++) {
-                let empty = 0;
-                for (let r = GRID_SIZE - 1; r >= 0; r--) {
-                    if (state.grid[r][c] === null) empty++;
-                    else if (empty > 0) {
-                        const tile = state.grid[r][c];
-                        state.grid[r + empty][c] = tile;
-                        state.grid[r][c] = null;
-                        tile.el.style.gridRow = (r + empty + 1);
-                    }
-                }
-                for (let r = 0; r < empty; r++) {
-                    const type = TILE_TYPES[Math.floor(Math.random() * TILE_TYPES.length)];
-                    state.grid[r][c] = { type, el: createTile(r, c, type) };
-                }
-            }
-        }
-
-        function dealDmg(val) {
-            state.enemy.hp -= val;
-            showText(`-${val}`, '#ef4444', true);
-            if (state.enemy.hp <= 0) {
-                state.enemy.hp = 0;
-                document.getElementById('win-screen').classList.remove('hidden');
-            }
-        }
-
-        function enemyAtk() {
-            const dmg = Math.max(1, state.enemy.atk - state.player.def);
-            state.player.hp -= dmg;
-            state.player.def = 0;
-            showText(`-${dmg}`, '#fff');
-            document.body.classList.add('shake');
-            setTimeout(() => document.body.classList.remove('shake'), 300);
-            updateUI();
-        }
-
-        function heal(val) {
-            state.player.hp = Math.min(state.player.maxHp, state.player.hp + val);
-            showText(`+${val}`, '#10b981');
-        }
-
-        function nextLevel() {
-            document.getElementById('win-screen').classList.add('hidden');
-            if (state.player.level % 5 === 0) window.submitScore(state.player.level);
-            state.player.level++;
-            state.enemy.level++;
-            state.enemy.maxHp += 80;
-            state.enemy.hp = state.enemy.maxHp;
-            state.enemy.atk += 10;
-            state.player.maxHp += 25;
-            state.player.hp = state.player.maxHp;
             initGrid();
+            clearLines();
+            gameState.selectedTiles = [];
+
+            // Enemy Turn Logic
+            gameState.enemy.timer--;
+            if (gameState.enemy.timer <= 0) {
+                await enemyAttack();
+                gameState.enemy.timer = gameState.enemy.maxTimer;
+            }
+            
+            gameState.isProcessing = false;
             updateUI();
+            
+            if (gameState.player.hp <= 0) showEndScreen(false);
+            if (gameState.enemy.hp <= 0) levelUp();
+        }
+
+        function dealDamage(amount) {
+            gameState.enemy.hp -= amount;
+            showFloatingText(`-${amount}`, '#f43f5e', true);
+        }
+
+        async function enemyAttack() {
+            const hit = Math.max(1, gameState.enemy.atk - gameState.player.def);
+            gameState.player.hp -= hit;
+            gameState.player.def = 0;
+            showFloatingText(`CRIT -${hit}`, '#fff');
+            document.body.classList.add('shake');
+            setTimeout(() => document.body.classList.remove('shake'), 400);
+            updateUI();
+        }
+
+        function levelUp() {
+            gameState.player.level++;
+            gameState.player.maxHp += 30;
+            gameState.player.hp = gameState.player.maxHp;
+            gameState.enemy.level++;
+            gameState.enemy.maxHp += 80;
+            gameState.enemy.hp = gameState.enemy.maxHp;
+            gameState.enemy.atk += 8;
+            showFloatingText("LEVEL UP", "#38bdf8");
+            updateUI();
+        }
+
+        function useSkill(idx) {
+            if (gameState.isProcessing) return;
+            if (idx === 0 && gameState.player.energy >= 15) {
+                gameState.player.energy -= 15;
+                dealDamage(60 + (gameState.player.level * 15));
+                updateUI();
+            } else if (idx === 1 && gameState.player.energy >= 10) {
+                gameState.player.energy -= 10;
+                const h = 50 + (gameState.player.level * 10);
+                gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + h);
+                showFloatingText(`REBOOT +${h}`, '#10b981');
+                updateUI();
+            }
         }
 
         function updateUI() {
-            document.getElementById('enemy-hp-bar').style.width = (state.enemy.hp / state.enemy.maxHp) * 100 + '%';
-            document.getElementById('enemy-level').innerText = state.enemy.level;
-            document.getElementById('enemy-timer').innerText = state.enemy.timer;
-            document.getElementById('player-hp-bar').style.width = (state.player.hp / state.player.maxHp) * 100 + '%';
-            document.getElementById('player-level').innerText = state.player.level;
-            document.getElementById('player-energy').innerText = state.player.energy;
-            const s1 = document.getElementById('skill-1');
-            const s2 = document.getElementById('skill-2');
-            if (state.player.energy >= 15) {
-                s1.classList.remove('text-slate-500', 'bg-slate-800');
-                s1.classList.add('text-white', 'bg-rose-600', 'border-rose-400');
-            } else {
-                s1.classList.add('text-slate-500', 'bg-slate-800');
-                s1.classList.remove('text-white', 'bg-rose-600', 'border-rose-400');
-            }
-            if (state.player.energy >= 10) {
-                s2.classList.remove('text-slate-500', 'bg-slate-800');
-                s2.classList.add('text-white', 'bg-emerald-600', 'border-emerald-400');
-            } else {
-                s2.classList.add('text-slate-500', 'bg-slate-800');
-                s2.classList.remove('text-white', 'bg-emerald-600', 'border-emerald-400');
-            }
+            const eHpPct = (gameState.enemy.hp / gameState.enemy.maxHp) * 100;
+            const pHpPct = (gameState.player.hp / gameState.player.maxHp) * 100;
+            
+            document.getElementById('enemy-hp-bar').style.width = Math.max(0, eHpPct) + '%';
+            document.getElementById('enemy-hp-text').innerText = `${Math.ceil(gameState.enemy.hp)} / ${gameState.enemy.maxHp}`;
+            document.getElementById('enemy-timer').innerText = gameState.enemy.timer;
+            document.getElementById('enemy-level').innerText = gameState.enemy.level;
+
+            document.getElementById('player-hp-bar').style.width = Math.max(0, pHpPct) + '%';
+            document.getElementById('player-energy').innerText = gameState.player.energy;
+            document.getElementById('player-def').innerText = gameState.player.def;
+            document.getElementById('player-level').innerText = gameState.player.level;
+
+            // Skill Button States
+            const b1 = document.getElementById('skill-1');
+            const b2 = document.getElementById('skill-2');
+            
+            if (gameState.player.energy >= 15) b1.className = "bg-sky-600 border border-sky-400 py-3 text-[10px] font-black uppercase text-white rounded-sm btn-active";
+            else b1.className = "bg-slate-800/50 border border-slate-700 py-3 text-[10px] font-black uppercase text-slate-500 rounded-sm opacity-50";
+            
+            if (gameState.player.energy >= 10) b2.className = "bg-emerald-600 border border-emerald-400 py-3 text-[10px] font-black uppercase text-white rounded-sm btn-active";
+            else b2.className = "bg-slate-800/50 border border-slate-700 py-3 text-[10px] font-black uppercase text-slate-500 rounded-sm opacity-50";
         }
 
-        window.useSkill = (i) => {
-            if (state.isProcessing) return;
-            if (i === 0 && state.player.energy >= 15) {
-                state.player.energy -= 15; dealDmg(60 + (state.player.level * 8)); updateUI();
-            } else if (i === 1 && state.player.energy >= 10) {
-                state.player.energy -= 10; heal(50); updateUI();
-            }
-        };
-
-        function showText(t, c, e = false) {
+        function showFloatingText(text, color, isEnemy = false) {
             const div = document.createElement('div');
             div.className = 'floating-text';
-            div.innerText = t; div.style.color = c;
-            div.style.left = '50%'; div.style.top = e ? '20%' : '65%';
+            div.innerText = text;
+            div.style.color = color;
+            div.style.left = '50%';
+            div.style.top = isEnemy ? '25%' : '75%';
             document.body.appendChild(div);
             setTimeout(() => div.remove(), 800);
         }
 
         function resizeCanvas() {
-    const canvas = document.getElementById('connectionCanvas');
-    if (!canvas) return;
-
-    const rect = gridContainer.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    canvas.style.width = rect.width + "px";
-    canvas.style.height = rect.height + "px";
-
-    const ctx = canvas.getContext("2d");
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
-    ctx.scale(dpr, dpr);
-}
-
-function clearLines() {
-    const canvas = document.getElementById('connectionCanvas');
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-function drawLines() {
-    const canvas = document.getElementById('connectionCanvas');
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    clearLines();
-
-    if (gameState.selectedTiles.length < 2) return;
-
-    const rect = gridContainer.getBoundingClientRect();
-    const tileSize = rect.width / GRID_SIZE;
-
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = "white";
-    ctx.shadowColor = "white";
-    ctx.shadowBlur = 15;
-
-    ctx.beginPath();
-
-    gameState.selectedTiles.forEach((tile, index) => {
-        const x = tile.c * tileSize + tileSize / 2;
-        const y = tile.r * tileSize + tileSize / 2;
-
-        if (index === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
+            const rect = gridContainer.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            drawLines();
         }
-    });
 
-    ctx.stroke();
-    ctx.shadowBlur = 0; // reset shadow
-}
+        function clearLines() {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
 
-window.addEventListener("resize", resizeCanvas);
+        function drawLines() {
+            if (gameState.selectedTiles.length < 1) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.beginPath();
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            const firstTileType = gameState.grid[gameState.selectedTiles[0].r][gameState.selectedTiles[0].c].type;
+            ctx.strokeStyle = TILE_COLORS[firstTileType];
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = TILE_COLORS[firstTileType];
+
+            const rect = gridContainer.getBoundingClientRect();
+            gameState.selectedTiles.forEach((p, i) => {
+                const tRect = gameState.grid[p.r][p.c].el.getBoundingClientRect();
+                const x = (tRect.left - rect.left) + tRect.width / 2;
+                const y = (tRect.top - rect.top) + tRect.height / 2;
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        }
+
+        function showEndScreen(victory) {
+            document.getElementById('battle-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+            document.getElementById('end-title').innerText = victory ? "ASHED VICTORY" : "CRITICAL FAILURE";
+            document.getElementById('end-title').className = victory ? "text-6xl font-black italic text-sky-500" : "text-6xl font-black italic text-rose-600";
+        }
+
+        function restartGame() { location.reload(); }
+    </script>
+</body>
+</html>
+
