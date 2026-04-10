@@ -1,6 +1,6 @@
 ASHED
 Ashe: Attack • Shield • Health • Energy
-Developed by @unruly357
+Developed by @Unruly357
 A MzUnruly8 Production
 Overview
 ASHED is a minimalist grid-link combat game built with vanilla JavaScript and TailwindCSS.
