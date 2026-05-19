@@ -1,0 +1,25 @@
+{
+  "name": "ashed",
+  "version": "1.0.0",
+  "description": "ASHED - A minimalist grid-link combat game",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'No build step required for vanilla JS project'",
+    "lint": "echo 'No linter configured'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mzunruly8/ASHED.git"
+  },
+  "keywords": [
+    "game",
+    "puzzle",
+    "javascript"
+  ],
+  "author": "@unruly357",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@vercel/speed-insights": "^2.0.0"
+  }
+}
